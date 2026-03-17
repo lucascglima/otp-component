@@ -1,0 +1,54 @@
+/* ===== OTP 6 Digits - Azure B2C Component ===== */
+
+.otp-container {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin: 24px 0;
+}
+
+.otp-input {
+  width: 48px;
+  height: 56px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 600;
+  border: 2px solid #d1d5db;
+  border-radius: 8px;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  caret-color: #0078d4;
+  background-color: #fff;
+  color: #1f2937;
+  -moz-appearance: textfield;
+}
+
+.otp-input::-webkit-outer-spin-button,
+.otp-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.otp-input:focus {
+  border-color: #0078d4;
+  box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.2);
+}
+
+.otp-input.filled {
+  border-color: #0078d4;
+  background-color: #f0f7ff;
+}
+
+.otp-input.error {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+
+.otp-label {
+  text-align: center;
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 8px;
+}

@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Azure B2C - Verificação de E-mail (Simulação)</title>
+    <link rel="stylesheet" href="otp-component.css" />
+    <style>
+      /* Simulação do layout Azure B2C */
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family:
+          "Segoe UI",
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        background: #f3f4f6;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+      }
+
+      .b2c-panel {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+        padding: 40px;
+        width: 100%;
+        max-width: 480px;
+      }
+
+      .b2c-panel h1 {
+        font-size: 22px;
+        color: #1f2937;
+        text-align: center;
+        margin-bottom: 8px;
+      }
+
+      .b2c-panel p {
+        font-size: 14px;
+        color: #6b7280;
+        text-align: center;
+        margin-bottom: 24px;
+      }
+
+      .b2c-field {
+        margin-bottom: 16px;
+      }
+
+      .b2c-field label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 6px;
+      }
+
+      .b2c-field input[type="email"],
+      .b2c-field input[type="text"] {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+
+      .b2c-field input:focus {
+        border-color: #0078d4;
+        box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.15);
+      }
+
+      .b2c-buttons {
+        display: flex;
+        gap: 12px;
+        margin-top: 20px;
+      }
+
+      .b2c-btn {
+        flex: 1;
+        padding: 12px 16px;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+          background 0.2s,
+          opacity 0.2s;
+      }
+
+      .b2c-btn-primary {
+        background: #0078d4;
+        color: #fff;
+      }
+
+      .b2c-btn-primary:hover {
+        background: #106ebe;
+      }
+
+      .b2c-btn-secondary {
+        background: #e5e7eb;
+        color: #374151;
+      }
+
+      .b2c-btn-secondary:hover {
+        background: #d1d5db;
+      }
+
+      .b2c-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      /* Seção de verificação (simula B2C) */
+      #emailVerificationControl {
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid #e5e7eb;
+      }
+
+      .verification-section-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 12px;
+        text-align: center;
+      }
+
+      /* Debug panel */
+      .debug-panel {
+        margin-top: 32px;
+        padding: 16px;
+        background: #f9fafb;
+        border: 1px dashed #d1d5db;
+        border-radius: 8px;
+      }
+
+      .debug-panel h3 {
+        font-size: 13px;
+        color: #9ca3af;
+        margin-bottom: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .debug-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 0;
+        font-size: 13px;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .debug-row:last-child {
+        border-bottom: none;
+      }
+
+      .debug-label {
+        color: #6b7280;
+      }
+
+      .debug-value {
+        font-family: "Consolas", "Courier New", monospace;
+        color: #1f2937;
+        font-weight: 600;
+        background: #e5e7eb;
+        padding: 2px 8px;
+        border-radius: 4px;
+        min-width: 80px;
+        text-align: center;
+      }
+
+      .debug-log {
+        margin-top: 12px;
+        max-height: 150px;
+        overflow-y: auto;
+        font-family: "Consolas", monospace;
+        font-size: 12px;
+        color: #6b7280;
+        background: #fff;
+        padding: 8px;
+        border-radius: 4px;
+        border: 1px solid #e5e7eb;
+      }
+
+      .debug-log .log-entry {
+        padding: 2px 0;
+        border-bottom: 1px solid #f3f4f6;
+      }
+
+      .debug-log .log-entry:last-child {
+        border-bottom: none;
+      }
+
+      .log-time {
+        color: #9ca3af;
+      }
+      .log-event {
+        color: #0078d4;
+        font-weight: 600;
+      }
+      .log-value {
+        color: #059669;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="b2c-panel">
+      <h1>Verificar seu e-mail</h1>
+      <p>
+        Enviamos um código de verificação para seu e-mail. Insira o código
+        abaixo.
+      </p>
+
+      <!-- Simula campo de e-mail do B2C -->
+      <div class="b2c-field">
+        <label for="email">E-mail</label>
+        <input type="email" id="email" value="usuario@exemplo.com" readonly />
+      </div>
+
+      <!-- Simula a seção de verificação do Azure B2C -->
+      <div id="emailVerificationControl">
+        <div class="verification-section-title">Código de verificação</div>
+
+        <!-- Input original do Azure B2C (será oculto pelo componente OTP) -->
+        <div class="b2c-field">
+          <input
+            type="text"
+            id="VerificationCode"
+            placeholder="Insira o código de verificação"
+            autocomplete="one-time-code"
+          />
+        </div>
+
+        <!-- Botões do B2C -->
+        <div class="b2c-buttons">
+          <button
+            type="button"
+            id="emailVerificationControl_but_verify_code"
+            class="b2c-btn b2c-btn-primary"
+          >
+            Verificar código
+          </button>
+          <button
+            type="button"
+            id="emailVerificationControl_but_send_new_code"
+            class="b2c-btn b2c-btn-secondary"
+          >
+            Enviar novo código
+          </button>
+        </div>
+      </div>
+
+      <!-- Painel de debug para testar o componente -->
+      <div class="debug-panel">
+        <h3>🔍 Debug — Estado do componente</h3>
+        <div class="debug-row">
+          <span class="debug-label">#VerificationCode value:</span>
+          <span class="debug-value" id="debug-vc-value">—</span>
+        </div>
+        <div class="debug-row">
+          <span class="debug-label">OTP completo (6 dígitos):</span>
+          <span class="debug-value" id="debug-otp-complete">❌ Não</span>
+        </div>
+        <div class="debug-row">
+          <span class="debug-label">Último evento:</span>
+          <span class="debug-value" id="debug-last-event">—</span>
+        </div>
+        <div class="debug-log" id="debug-log"></div>
+      </div>
+    </div>
+
+    <!-- Componente OTP -->
+    <script src="otp-component.js"></script>
+
+    <!-- Script de debug / teste -->
+    <script>
+      (function () {
+        var vcInput = document.getElementById("VerificationCode");
+        var debugVcValue = document.getElementById("debug-vc-value");
+        var debugOtpComplete = document.getElementById("debug-otp-complete");
+        var debugLastEvent = document.getElementById("debug-last-event");
+        var debugLog = document.getElementById("debug-log");
+
+        function logEvent(eventName, detail) {
+          var now = new Date();
+          var time =
+            now.toLocaleTimeString("pt-BR", { hour12: false }) +
+            "." +
+            String(now.getMilliseconds()).padStart(3, "0");
+          var entry = document.createElement("div");
+          entry.className = "log-entry";
+          entry.innerHTML =
+            '<span class="log-time">[' +
+            time +
+            ']</span> <span class="log-event">' +
+            eventName +
+            '</span> <span class="log-value">' +
+            detail +
+            "</span>";
+          debugLog.prepend(entry);
+
+          // Mantém máximo 50 entradas
+          while (debugLog.children.length > 50) {
+            debugLog.removeChild(debugLog.lastChild);
+          }
+        }
+
+        function updateDebug() {
+          var val = vcInput.value;
+          debugVcValue.textContent = val || "—";
+
+          if (/^[0-9]{6}$/.test(val)) {
+            debugOtpComplete.textContent = "✅ Sim";
+            debugOtpComplete.style.color = "#059669";
+          } else {
+            debugOtpComplete.textContent = "❌ Não (" + val.length + "/6)";
+            debugOtpComplete.style.color = "#dc2626";
+          }
+        }
+
+        // Monitora mudanças no #VerificationCode
+        vcInput.addEventListener("input", function () {
+          debugLastEvent.textContent = "input";
+          logEvent("input", 'valor: "' + vcInput.value + '"');
+          updateDebug();
+        });
+
+        vcInput.addEventListener("change", function () {
+          debugLastEvent.textContent = "change";
+          logEvent("change", 'valor: "' + vcInput.value + '"');
+          updateDebug();
+        });
+
+        // Monitora click no botão de verificar
+        document
+          .getElementById("emailVerificationControl_but_verify_code")
+          .addEventListener("click", function () {
+            debugLastEvent.textContent = "SUBMIT";
+            logEvent("SUBMIT ✅", 'código enviado: "' + vcInput.value + '"');
+            updateDebug();
+            alert("Código enviado para verificação: " + vcInput.value);
+          });
+
+        // Monitora click no botão de reenviar
+        document
+          .getElementById("emailVerificationControl_but_send_new_code")
+          .addEventListener("click", function () {
+            logEvent("RESEND", "novo código solicitado");
+            alert("Novo código enviado! (Simulação)");
+          });
+
+        // Polling para atualizar debug
+        setInterval(updateDebug, 300);
+        updateDebug();
+      })();
+    </script>
+  </body>
+</html>
