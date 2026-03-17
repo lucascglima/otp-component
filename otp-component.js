@@ -93,6 +93,53 @@
    * Registra todos os event listeners nos inputs OTP.
    */
   function bindEvents(inputs, verificationInput) {
+    // Histórico para undo/redo
+    var history = [];
+    var historyIndex = -1;
+    var MAX_HISTORY = 30;
+
+    function snapshotState() {
+      var state = [];
+      for (var i = 0; i < OTP_LENGTH; i++) state.push(inputs[i].value);
+      return state.join("");
+    }
+
+    function pushHistory() {
+      var current = snapshotState();
+      // Não duplica o estado atual
+      if (historyIndex >= 0 && history[historyIndex] === current) return;
+      // Remove qualquer redo futuro
+      history = history.slice(0, historyIndex + 1);
+      history.push(current);
+      if (history.length > MAX_HISTORY) history.shift();
+      historyIndex = history.length - 1;
+    }
+
+    function restoreState(state) {
+      for (var i = 0; i < OTP_LENGTH; i++) {
+        inputs[i].value = state[i] || "";
+      }
+      updateClasses(inputs);
+      syncToVerificationCode(inputs, verificationInput);
+    }
+
+    function undo() {
+      if (historyIndex > 0) {
+        historyIndex--;
+        restoreState(history[historyIndex]);
+      }
+    }
+
+    function redo() {
+      if (historyIndex < history.length - 1) {
+        historyIndex++;
+        restoreState(history[historyIndex]);
+      }
+    }
+
+    // Snapshot inicial
+    pushHistory();
+
     inputs.forEach(function (input, idx) {
       // Input: aceita apenas dígitos numéricos
       input.addEventListener("input", function (e) {
@@ -102,6 +149,7 @@
           e.target.value = "";
           updateClasses(inputs);
           syncToVerificationCode(inputs, verificationInput);
+          pushHistory();
           return;
         }
 
@@ -110,6 +158,7 @@
           distributeDigits(inputs, value, idx);
           updateClasses(inputs);
           syncToVerificationCode(inputs, verificationInput);
+          pushHistory();
           autoSubmitIfComplete(inputs);
           return;
         }
@@ -117,6 +166,7 @@
         e.target.value = value[0];
         updateClasses(inputs);
         syncToVerificationCode(inputs, verificationInput);
+        pushHistory();
 
         // Move para o próximo input
         if (idx < OTP_LENGTH - 1) {
@@ -140,41 +190,121 @@
             updateClasses(inputs);
             syncToVerificationCode(inputs, verificationInput);
           }
+          pushHistory();
           e.preventDefault();
           return;
         }
 
         if (e.key === "Delete") {
-          // Shift dos dígitos à direita para a esquerda (comportamento padrão de input)
+          if (e.ctrlKey || e.metaKey) {
+            // Ctrl+Delete: limpa do cursor até o final
+            for (var cd = idx; cd < OTP_LENGTH; cd++) { inputs[cd].value = ""; }
+            updateClasses(inputs);
+            syncToVerificationCode(inputs, verificationInput);
+            pushHistory();
+            e.preventDefault();
+            return;
+          }
+          // Delete: shift dos dígitos à direita para a esquerda
           for (var d = idx; d < OTP_LENGTH - 1; d++) {
             inputs[d].value = inputs[d + 1].value;
           }
           inputs[OTP_LENGTH - 1].value = "";
           updateClasses(inputs);
           syncToVerificationCode(inputs, verificationInput);
+          pushHistory();
           e.preventDefault();
           return;
         }
 
-        if (e.key === "ArrowLeft" && idx > 0) {
-          inputs[idx - 1].focus();
-          inputs[idx - 1].select();
+        if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
+          if (idx > 0) {
+            inputs[idx - 1].focus();
+            inputs[idx - 1].select();
+          }
           e.preventDefault();
           return;
         }
 
-        if (e.key === "ArrowRight" && idx < OTP_LENGTH - 1) {
-          inputs[idx + 1].focus();
-          inputs[idx + 1].select();
+        if (e.key === "ArrowRight" || e.key === "ArrowUp") {
+          if (idx < OTP_LENGTH - 1) {
+            inputs[idx + 1].focus();
+            inputs[idx + 1].select();
+          }
           e.preventDefault();
           return;
         }
+
+        if (e.key === "Home") {
+          inputs[0].focus();
+          inputs[0].select();
+          e.preventDefault();
+          return;
+        }
+
+        if (e.key === "End") {
+          inputs[OTP_LENGTH - 1].focus();
+          inputs[OTP_LENGTH - 1].select();
+          e.preventDefault();
+          return;
+        }
+
+        // Enter: submeter verificação
+        if (e.key === "Enter") {
+          var btn = document.getElementById(SUBMIT_BUTTON_ID);
+          if (btn && !btn.disabled) btn.click();
+          e.preventDefault();
+          return;
+        }
+
+        // Escape: desfocar o componente
+        if (e.key === "Escape") {
+          e.target.blur();
+          e.preventDefault();
+          return;
+        }
+
+        // Ctrl+A / Cmd+A: seleciona todos (foca o primeiro)
+        if ((e.ctrlKey || e.metaKey) && e.key === "a") {
+          inputs[0].focus();
+          inputs[0].select();
+          e.preventDefault();
+          return;
+        }
+
+        // Ctrl+Z / Cmd+Z: desfazer
+        if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
+          undo();
+          e.preventDefault();
+          return;
+        }
+
+        // Ctrl+Y / Cmd+Y ou Ctrl+Shift+Z: refazer
+        if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
+          redo();
+          e.preventDefault();
+          return;
+        }
+
+        // Ctrl+Backspace / Cmd+Backspace: limpa tudo
+        if ((e.ctrlKey || e.metaKey) && e.key === "Backspace") {
+          for (var c = 0; c < OTP_LENGTH; c++) { inputs[c].value = ""; }
+          inputs[0].focus();
+          updateClasses(inputs);
+          syncToVerificationCode(inputs, verificationInput);
+          pushHistory();
+          e.preventDefault();
+          return;
+        }
+
+        // Tab / Shift+Tab: comportamento nativo (não interceptar)
 
         // Se é um dígito e o campo já tem valor, sobrescreve e avança
         if (/^[0-9]$/.test(e.key) && e.target.value !== "") {
           e.target.value = e.key;
           updateClasses(inputs);
           syncToVerificationCode(inputs, verificationInput);
+          pushHistory();
           if (idx < OTP_LENGTH - 1) {
             inputs[idx + 1].focus();
             inputs[idx + 1].select();
@@ -193,6 +323,29 @@
         ) {
           e.preventDefault();
         }
+      });
+
+      // Copy: copia o OTP completo (não apenas o dígito do campo atual)
+      input.addEventListener("copy", function (e) {
+        e.preventDefault();
+        var fullOtp = getOtpValue(inputs);
+        if (e.clipboardData) {
+          e.clipboardData.setData("text/plain", fullOtp);
+        }
+      });
+
+      // Cut: copia o OTP completo e limpa todos os campos
+      input.addEventListener("cut", function (e) {
+        e.preventDefault();
+        var fullOtp = getOtpValue(inputs);
+        if (e.clipboardData) {
+          e.clipboardData.setData("text/plain", fullOtp);
+        }
+        for (var ct = 0; ct < OTP_LENGTH; ct++) { inputs[ct].value = ""; }
+        inputs[0].focus();
+        updateClasses(inputs);
+        syncToVerificationCode(inputs, verificationInput);
+        pushHistory();
       });
 
       // Paste: suporte a Ctrl+V e click direito -> colar
@@ -217,7 +370,27 @@
         distributeDigits(inputs, digits, idx);
         updateClasses(inputs);
         syncToVerificationCode(inputs, verificationInput);
+        pushHistory();
         autoSubmitIfComplete(inputs);
+      });
+
+      // Drop: arrastar texto numérico para o campo
+      input.addEventListener("drop", function (e) {
+        e.preventDefault();
+        var data = e.dataTransfer ? e.dataTransfer.getData("text/plain") || e.dataTransfer.getData("Text") : "";
+        var digits = sanitize(data);
+        if (digits.length === 0) return;
+
+        distributeDigits(inputs, digits, idx);
+        updateClasses(inputs);
+        syncToVerificationCode(inputs, verificationInput);
+        pushHistory();
+        autoSubmitIfComplete(inputs);
+      });
+
+      // Previne o comportamento padrão de dragover para permitir drop
+      input.addEventListener("dragover", function (e) {
+        e.preventDefault();
       });
 
       // Focus: seleciona o conteúdo ao focar
