@@ -145,7 +145,11 @@
         }
 
         if (e.key === "Delete") {
-          e.target.value = "";
+          // Shift dos dígitos à direita para a esquerda (comportamento padrão de input)
+          for (var d = idx; d < OTP_LENGTH - 1; d++) {
+            inputs[d].value = inputs[d + 1].value;
+          }
+          inputs[OTP_LENGTH - 1].value = "";
           updateClasses(inputs);
           syncToVerificationCode(inputs, verificationInput);
           e.preventDefault();
