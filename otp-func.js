@@ -3,9 +3,7 @@
  * Cria inputs OTP de 6 dígitos, sincroniza com #VerificationCode
  * e realiza auto-submit ao completar.
  */
-(function () {
-  "use strict";
-
+function initOtp6Digits() {
   const OTP_LENGTH = 6;
   const CONTAINER_ID = "otp-container";
   const VERIFICATION_INPUT_ID = "VerificationCode";
@@ -550,6 +548,7 @@
     }
 
     function checkSuccessMessage() {
+      // Azure B2C usa .verificationSuccessText ou .verificationInfoText com texto de sucesso
       var successEl = document.querySelector(
         ".verificationSuccessText, .verification-success, .verificationInfoText.success",
       );
@@ -565,6 +564,7 @@
         return true;
       }
 
+      // Busca genérica por texto de sucesso no bloco de verificação
       var verificationControl = document.getElementById(
         "emailVerificationControl",
       );
@@ -591,6 +591,7 @@
         "emailVerificationControl",
       );
 
+      // Se a seção inteira de verificação sumiu ou está oculta
       if (verificationSection && isHidden(verificationSection)) {
         console.log(
           "[MFA-Watcher] ✅ Seção de verificação (#emailVerificationControl) está oculta.",
@@ -598,6 +599,7 @@
         return true;
       }
 
+      // Se o container OTP e o input original sumiram
       if (
         (otpContainer && isHidden(otpContainer)) ||
         (!otpContainer && verificationInput && isHidden(verificationInput))
@@ -642,6 +644,7 @@
         verifyHidden,
       );
 
+      // Dispara se pelo menos 2 dos 3 sinais forem verdadeiros
       var signals =
         (hasSuccess ? 1 : 0) + (otpHidden ? 1 : 0) + (verifyHidden ? 1 : 0);
       if (signals >= 2) {
@@ -665,6 +668,7 @@
       }
     }
 
+    // MutationObserver para reagir a mudanças no DOM em tempo real
     var mfaObserver = new MutationObserver(function (mutations) {
       if (alreadyClicked) return;
 
@@ -694,6 +698,7 @@
       attributeFilter: ["style", "class", "aria-hidden", "disabled"],
     });
 
+    // Polling como fallback (para mudanças que o Observer não captura)
     var pollInterval = setInterval(function () {
       if (alreadyClicked) {
         clearInterval(pollInterval);
@@ -717,4 +722,4 @@
     init();
     watchForMfaCompletion();
   }
-})();
+}
